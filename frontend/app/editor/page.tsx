@@ -9,12 +9,14 @@ export default function EditorPage() {
     const [files, setFiles] = useState<Record<string, string>>({});
     const [stack, setStack] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [projectId, setProjectId] = useState<string | null>(null);
     const [resumeData, setResumeData] = useState<any>(null);
 
     useEffect(() => {
         const filesData = sessionStorage.getItem('generatedFiles');
         const stackData = sessionStorage.getItem('selectedStack');
         const id = sessionStorage.getItem('sessionId');
+        const projId = sessionStorage.getItem('projectId');
         const data = sessionStorage.getItem('resumeData');
 
         if (!filesData || !stackData || !id) {
@@ -25,6 +27,7 @@ export default function EditorPage() {
         setFiles(JSON.parse(filesData));
         setStack(stackData);
         setSessionId(id);
+        setProjectId(projId);
         setResumeData(data ? JSON.parse(data) : null);
     }, [router]);
 
@@ -38,6 +41,7 @@ export default function EditorPage() {
             onFilesChange={setFiles}
             stack={stack}
             sessionId={sessionId}
+            projectId={projectId || undefined}
             resumeData={resumeData}
         />
     );

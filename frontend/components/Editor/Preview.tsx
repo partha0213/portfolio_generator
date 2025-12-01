@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface PreviewProps {
   files: Record<string, string>;
@@ -9,9 +9,12 @@ interface PreviewProps {
 
 export default function Preview({ files, stack }: PreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!iframeRef.current) return;
+
+    setIsLoading(true);
 
     let previewHTML = '';
 
@@ -26,19 +29,47 @@ export default function Preview({ files, stack }: PreviewProps) {
     }
 
     iframeRef.current.srcdoc = previewHTML;
+
+    const timer = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(timer);
   }, [files, stack]);
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="bg-[#111111] px-6 py-3 border-b border-gray-800 flex items-center justify-between">
-        <span className="text-gray-300 text-sm flex items-center gap-2">
-          <span>👁️</span>
-          <span>Live Preview</span>
-        </span>
-        <span className="text-xs text-gray-500 uppercase bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20 text-blue-400">
-          {stack}
-        </span>
-      </div>
+    <div className="h-full flex flex-col bg-white relative">
+      {/* Loading Animation */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center z-10">
+          <div className="text-center">
+            {/* Animated Portfolio Icon */}
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-cyan-500 rounded-2xl animate-pulse"></div>
+              <div className="absolute inset-2 bg-gray-900 rounded-xl flex items-center justify-center">
+                <svg className="w-12 h-12 text-blue-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Loading Text */}
+            <h3 className="text-xl font-semibold text-white mb-2">Preparing Your Portfolio</h3>
+            <p className="text-gray-400 text-sm mb-6">Crafting something amazing...</p>
+
+            {/* Progress Bar */}
+            <div className="w-64 h-1 bg-gray-700 rounded-full overflow-hidden mx-auto">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+            </div>
+
+            {/* Spinning Dots */}
+            <div className="flex gap-2 justify-center mt-6">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Content */}
       <div className="flex-1 overflow-hidden bg-white">
         <iframe
           ref={iframeRef}
@@ -46,6 +77,15 @@ export default function Preview({ files, stack }: PreviewProps) {
           title="Portfolio Preview"
         />
       </div>
+
+      {/* Keyframe Animation */}
+      <style jsx>{`
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(0%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -66,12 +106,12 @@ function generateReactPreview(files: Record<string, string>): string {
   // Remove all import statements (they can't be used in inline scripts)
   appCode = appCode.replace(/import\s+.*from\s+['"][^'"]*['"];?/g, '');
   appCode = appCode.replace(/import\s+['"][^'"]*['"];?/g, '');
-  
+
   // Build React hook extraction code
   const hookExtraction = Array.from(destructuredImports).length > 0
     ? `const { ${Array.from(destructuredImports).join(', ')} } = React;`
     : '';
-  
+
   appCode = appCode.replace(/export\s+default\s+App/g, '// App component defined above');
 
   return `
@@ -109,7 +149,7 @@ function generateNextJsPreview(files: Record<string, string>): string {
   let appCode = files['app/page.tsx'] || '';
 
   appCode = appCode.replace(/"use client"\s*/g, '');
-  
+
   // Extract destructured imports before removing them
   const destructuredImports = new Set<string>();
   const importMatch = appCode.match(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/);
@@ -117,16 +157,16 @@ function generateNextJsPreview(files: Record<string, string>): string {
     const imports = importMatch[1].split(',').map(s => s.trim());
     imports.forEach(imp => destructuredImports.add(imp));
   }
-  
+
   // Remove all import statements (they can't be used in inline scripts)
   appCode = appCode.replace(/import\s+.*from\s+['"][^'"]*['"];?/g, '');
   appCode = appCode.replace(/import\s+['"][^'"]*['"];?/g, '');
-  
+
   // Build React hook extraction code
   const hookExtraction = Array.from(destructuredImports).length > 0
     ? `const { ${Array.from(destructuredImports).join(', ')} } = React;`
     : '';
-  
+
   appCode = appCode.replace(/export\s+default\s+function\s+\w+\s*\(/g, 'function App(');
   appCode = appCode.replace(/export\s+default\s+function\s+\w+\(/g, 'function App(');
 

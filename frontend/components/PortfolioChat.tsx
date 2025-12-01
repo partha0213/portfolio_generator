@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 interface Message {
   id: string;
@@ -36,14 +37,13 @@ const PortfolioChat: React.FC<PortfolioChatProps> = ({ sessionId, resumeData, on
 
   const initializeChat = async () => {
     try {
-      const response = await fetch('/api/chat/portfolio/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, user_data: resumeData })
+      const response = await api.post('/api/chat/portfolio/initialize', { 
+        session_id: sessionId, 
+        user_data: resumeData 
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const assistantMessage: Message = {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -74,18 +74,14 @@ const PortfolioChat: React.FC<PortfolioChatProps> = ({ sessionId, resumeData, on
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat/portfolio/improve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          message: input,
-          user_data: resumeData
-        })
+      const response = await api.post('/api/chat/portfolio/improve', {
+        session_id: sessionId,
+        message: input,
+        user_data: resumeData
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const assistantMessage: Message = {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -107,17 +103,13 @@ const PortfolioChat: React.FC<PortfolioChatProps> = ({ sessionId, resumeData, on
   const getQuickTips = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/chat/portfolio/quick-tips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          user_data: resumeData
-        })
+      const response = await api.post('/api/chat/portfolio/quick-tips', {
+        session_id: sessionId,
+        user_data: resumeData
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const tipMessage: Message = {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -146,17 +138,13 @@ const PortfolioChat: React.FC<PortfolioChatProps> = ({ sessionId, resumeData, on
 
     setLoading(true);
     try {
-      const response = await fetch('/api/chat/portfolio/focus-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          focus_area: area
-        })
+      const response = await api.post('/api/chat/portfolio/focus-suggestions', {
+        session_id: sessionId,
+        focus_area: area
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const assistantMessage: Message = {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -453,12 +441,132 @@ const PortfolioChat: React.FC<PortfolioChatProps> = ({ sessionId, resumeData, on
         }
 
         @media (max-width: 768px) {
+          .portfolio-chat {
+            height: 100%;
+            border-radius: 12px;
+          }
+
+          .chat-header {
+            padding: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+          }
+
+          .chat-title {
+            font-size: 1.1rem;
+            flex: 0 0 100%;
+          }
+
+          .chat-tabs {
+            flex: 0 0 100%;
+            gap: 0.5rem;
+          }
+
+          .chat-tab {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+          }
+
+          .messages-container {
+            padding: 1rem;
+            gap: 0.8rem;
+          }
+
           .message-bubble {
             max-width: 90%;
+            padding: 0.8rem;
+            font-size: 0.9rem;
+          }
+
+          .code-suggestion {
+            padding: 0.8rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            max-width: 100%;
+            overflow-x: auto;
+          }
+
+          .code-copy-btn {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+          }
+
+          .focus-areas {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+          }
+
+          .focus-btn {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.75rem;
+          }
+
+          .input-container {
+            padding: 1rem;
+          }
+
+          .input-wrapper {
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .chat-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.7rem;
+            font-size: 0.9rem;
+          }
+
+          .send-btn {
+            padding: 0.7rem 1rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+          }
+
+          .tips-button {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.75rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .portfolio-chat {
+            border-radius: 8px;
+          }
+
+          .chat-header {
+            padding: 0.8rem;
+          }
+
+          .chat-title {
+            font-size: 1rem;
+          }
+
+          .messages-container {
+            padding: 0.8rem;
+            gap: 0.6rem;
+          }
+
+          .message-bubble {
+            padding: 0.6rem;
+            font-size: 0.85rem;
           }
 
           .focus-areas {
             grid-template-columns: 1fr;
+          }
+
+          .input-wrapper {
+            flex-direction: column;
+          }
+
+          .chat-input,
+          .send-btn {
+            width: 100%;
+          }
+
+          .tips-list {
+            font-size: 0.8rem;
           }
         }
       `}</style>

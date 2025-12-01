@@ -1,17 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import FileTree from './FileTree';
+import { useState, useEffect } from 'react';
+import { useEditor } from '@/contexts/EditorContext';
 import CodeEditor from './CodeEditor';
 import Preview from './Preview';
 import ChatPanel from './ChatPanel';
-import UnlimitedTemplateGenerator from './UnlimitedTemplateGenerator';
+import FileTree from './FileTree';
+import DeploymentDialog from '../DeploymentDialog';
+
+// Dynamic import for jszip to avoid SSR issues
+let JSZip: any = null;
+
+if (typeof window !== 'undefined') {
+    import('jszip').then((module) => {
+        JSZip = module.default;
+    });
+}
 
 interface EditorLayoutProps {
     stack: string;
     files: Record<string, string>;
     onFilesChange: (files: Record<string, string>) => void;
     sessionId: string;
+    projectId?: string;  // Add projectId
     resumeData: any;
 }
 
@@ -20,112 +31,109 @@ export default function EditorLayout({
     files,
     onFilesChange,
     sessionId,
+    projectId,
     resumeData
 }: EditorLayoutProps) {
     const fileKeys = Object.keys(files);
     const [activeFile, setActiveFile] = useState<string>(
         fileKeys.find(f => f.includes('App.jsx')) || fileKeys[0] || 'src/App.jsx'
     );
-    const [showChat, setShowChat] = useState(true);
-    const [showPreview, setShowPreview] = useState(true);
+    const { activeTab, setActiveTab: setContextActiveTab, setOnExport, setOnDeploy, isDeployDialogOpen, setIsDeployDialogOpen } = useEditor();
 
     const handleFileChange = (path: string, content: string) => {
         onFilesChange({ ...files, [path]: content });
     };
 
-    const handleUnlimitedTemplate = (newFiles: Record<string, string>) => {
-        onFilesChange(newFiles);
+    const handleExportCode = async () => {
+        try {
+            // If jszip isn't loaded yet, wait for it
+            if (!JSZip) {
+                const module = await import('jszip');
+                JSZip = module.default;
+            }
+
+            const zip = new JSZip();
+
+            // Add all project files to the zip
+            Object.entries(files).forEach(([path, content]) => {
+                zip.file(path, content);
+            });
+
+            // Add a README file with instructions
+            const readmeContent = `# Portfolio Project
+
+This is your generated portfolio project. 
+
+## How to use:
+
+### For React/Vite projects:
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+### For Next.js projects:
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## File Structure
+- All necessary files are included in this project
+- You can customize the code as needed
+- Deploy to Vercel, Netlify, or any hosting platform
+
+## Need help?
+Check the documentation for your framework:
+- React: https://react.dev
+- Next.js: https://nextjs.org
+- Vite: https://vitejs.dev
+
+Happy coding! 🚀
+`;
+            zip.file('README.md', readmeContent);
+
+            // Generate and download the zip file
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'portfolio-project.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export project. Please try again.');
+        }
     };
 
+    const handleDeploy = () => {
+        setIsDeployDialogOpen(true);
+    };
+
+    // Update context with callbacks
+    useEffect(() => {
+        setOnExport(() => handleExportCode);
+        setOnDeploy(() => handleDeploy);
+    }, [files, setOnExport, setOnDeploy]);
+
     return (
-        <div className="h-screen flex flex-col bg-[#0a0a0a]">
-            {/* Modern Header */}
-            <header className="bg-[#111111] border-b border-gray-800 px-6 py-3.5 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">PG</span>
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-semibold text-white">Portfolio Generator V2</h1>
-                            <p className="text-xs text-gray-400">AI-Powered Development</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                        <span className="px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-full border border-purple-500/20">
-                            {stack.toUpperCase()}
-                        </span>
-                        <span className="px-3 py-1 bg-green-500/10 text-green-400 text-xs font-medium rounded-full border border-green-500/20 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                            Live
-                        </span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <UnlimitedTemplateGenerator
-                        stack={stack}
-                        resumeData={resumeData}
-                        onTemplateGenerated={handleUnlimitedTemplate}
-                    />
-                    <button
-                        onClick={() => setShowPreview(!showPreview)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${showPreview
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-transparent text-gray-400 hover:bg-gray-800'
-                            }`}
-                    >
-                        👁️ Preview
-                    </button>
-                    <button
-                        onClick={() => setShowChat(!showChat)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${showChat
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-transparent text-gray-400 hover:bg-gray-800'
-                            }`}
-                    >
-                        💬 AI Chat
-                    </button>
-                    <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-purple-500/50">
-                        💾 Export
-                    </button>
-                </div>
-            </header>
+        <>
+            {/* Deployment Dialog */}
+            <DeploymentDialog
+                isOpen={isDeployDialogOpen}
+                onClose={() => setIsDeployDialogOpen(false)}
+                files={files}
+                projectId={projectId}
+                sessionId={sessionId}
+            />
 
-            {/* Main Editor Area */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* File Tree - Lovable style */}
-                <div className="w-56 bg-[#0f0f0f] border-r border-gray-800 flex flex-col">
-                    <div className="px-4 py-3 border-b border-gray-800">
-                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Files</h3>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                        <FileTree
-                            files={fileKeys}
-                            activeFile={activeFile}
-                            onSelect={setActiveFile}
-                        />
-                    </div>
-                </div>
-
-                {/* Code Editor - Lovable style */}
-                <div className="flex-1 flex flex-col min-w-0">
-                    <CodeEditor
-                        file={activeFile}
-                        content={files[activeFile] || '// Select a file from the tree'}
-                        onChange={(content: string) => handleFileChange(activeFile, content)}
-                    />
-                </div>
-
-                {/* Preview - Lovable style */}
-                {showPreview && (
-                    <div className="flex-1 border-l border-gray-800 min-w-0">
-                        <Preview files={files} stack={stack} />
-                    </div>
-                )}
-
-                {/* Chat Panel - Lovable style */}
-                {showChat && (
-                    <div className="w-96 border-l border-gray-800">
+            <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row bg-gradient-to-br from-[#0d1117] via-[#0d1117] to-[#010409] overflow-hidden">
+                {/* LEFT SIDEBAR - Chat Interface with internal scrolling */}
+                <div className="w-full lg:w-[500px] flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-800/50 bg-[#010409] overflow-hidden">
+                    <div className="flex-1 flex flex-col overflow-hidden bg-[#0d1117]">
                         <ChatPanel
                             sessionId={sessionId}
                             resumeData={resumeData}
@@ -133,8 +141,41 @@ export default function EditorLayout({
                             onFilesChange={onFilesChange}
                         />
                     </div>
-                )}
+                </div>
+
+                {/* RIGHT PANEL - Preview/Code Area with internal scrolling */}
+                <div className="w-full lg:flex-1 flex flex-col overflow-hidden">
+                    {/* Content Area */}
+                    <div className="flex-1 overflow-hidden">
+                        {activeTab === 'preview' ? (
+                            <Preview files={files} stack={stack} />
+                        ) : (
+                            <div className="h-full flex bg-[#0d1117] overflow-hidden">
+                                <div className="w-64 border-r border-gray-800/50 bg-[#010409] flex flex-col overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-gray-800/50 flex-shrink-0">
+                                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">File Explorer</h3>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto">
+                                        <FileTree
+                                            files={fileKeys}
+                                            activeFile={activeFile}
+                                            onSelect={setActiveFile}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 overflow-hidden">
+                                    <CodeEditor
+                                        file={activeFile}
+                                        content={files[activeFile] || '// Select a file'}
+                                        onChange={(content: string) => handleFileChange(activeFile, content)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 }

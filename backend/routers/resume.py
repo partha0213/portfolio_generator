@@ -1,15 +1,38 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Form, Depends
+from fastapi.security import OAuth2PasswordBearer
 from limiter import limiter
 from services.resume_parser import resume_parser
-from models import Session
+from services.auth import auth_service
+from models import Session, User
 from database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
+from sqlalchemy import select
 import uuid
 import os
 import json
 import json
 import hashlib
+
+# JWT Token verification dependency
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+    payload = auth_service.verify_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return user
 
 # Magic numbers for file validation
 PDF_HEADER = b'%PDF'
@@ -73,7 +96,8 @@ async def upload_resume(
     request: Request,
     file: UploadFile = File(...),
     prompt: str = Form(default=""),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Upload and parse resume file"""
     file_path = None
@@ -121,16 +145,17 @@ async def upload_resume(
         print(json.dumps(resume_data, indent=2))
         print(f"{'='*60}\n")
         
-        # Save session with prompt
+        # Save session with prompt and user_id
         session = Session(
             id=session_id,
+            user_id=current_user.id,
             resume_filename=safe_filename,
             resume_data=resume_data,
             user_prompt=prompt if prompt else None
         )
         db.add(session)
         await db.commit()
-        print(f"✓ Session saved: {session_id}")
+        print(f"✓ Session saved: {session_id} for user {current_user.email}")
         
         return {
             "session_id": session_id,

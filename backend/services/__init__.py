@@ -1,4 +1,20 @@
-# Placeholder for services __init__
-from .openai_service import openai_service
-from .template_engine import template_engine
-from .resume_parser import resume_parser
+# Services module exports - Critical Features
+from .file_service import FileService
+from .deployment_service import DeploymentService
+from .asset_service import AssetService
+from .cache_service import CacheService
+from .analytics_service import AnalyticsService
+from .lovable_style_generator import PortfolioGenerator as LovableStyleGenerator
+from .email_service import EmailService
+
+__all__ = [
+    "FileService",
+    "DeploymentService",
+    "AssetService",
+    "CacheService",
+    "AnalyticsService",
+    "LovableStyleGenerator",
+    "EmailService",
+]
+
+

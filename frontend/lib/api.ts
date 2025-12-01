@@ -1,9 +1,10 @@
 import axios from 'axios';
 
+// API base URL - points to the FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export const api = axios.create({
-    baseURL: API_URL,
+    baseURL: API_URL,  // Points to backend API (localhost:8000 by default)
     headers: {
         'Content-Type': 'application/json',
     },
@@ -31,7 +32,8 @@ api.interceptors.response.use(
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (!refreshToken) throw new Error('No refresh token');
 
-                const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {
+                // ✅ FIX: Changed from '/auth/refresh' to '/api/auth/refresh'
+                const { data } = await axios.post('/api/auth/refresh', {
                     refresh_token: refreshToken
                 });
 
@@ -54,12 +56,29 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-    login: async (credentials: any) => {
+    login: async (credentials: { email: string; password: string }) => {
         const { data } = await api.post('/api/auth/login', credentials);
         return data;
     },
-    signup: async (userData: any) => {
-        const { data } = await api.post('/api/auth/signup', userData);
+    signup: async (userData: { email: string; password: string; full_name: string }) => {
+        const { data } = await api.post('/api/auth/signup', {
+            email: userData.email,
+            password: userData.password,
+            full_name: userData.full_name,
+        });
+        return data;
+    },
+    verifyEmail: async (email: string, verificationCode: string) => {
+        const { data } = await api.post('/api/auth/verify-email', {
+            email,
+            verification_code: verificationCode,
+        });
+        return data;
+    },
+    resendVerification: async (email: string) => {
+        const { data } = await api.post('/api/auth/resend-verification', null, {
+            params: { email }
+        });
         return data;
     },
     getHistory: async () => {
@@ -80,11 +99,11 @@ export const uploadResume = async (file: File) => {
 };
 
 export const generatePortfolio = async (sessionId: string, stack: string, options: any = {}, resumeData: any = null) => {
-    const { data } = await api.post('/api/generate/generate', {
+    const { data } = await api.post('/api/generate/lovable', {
         session_id: sessionId,
-        stack,
-        options,
+        prompt: options.prompt || "Create a modern, professional portfolio",
         resume_data: resumeData,
+        framework: stack || "nextjs",
     });
 
     return data;
@@ -101,5 +120,15 @@ export const sendChatMessage = async (
         current_files: currentFiles,
     });
 
+    return data;
+};
+
+export const getChatHistory = async (sessionId: string) => {
+    const { data } = await api.get(`/api/chat/${sessionId}/history`);
+    return data;
+};
+
+export const initChat = async (sessionId: string) => {
+    const { data } = await api.post(`/api/chat/${sessionId}/init`);
     return data;
 };

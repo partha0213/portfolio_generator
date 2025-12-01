@@ -2,229 +2,202 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import UploadResume from '@/components/UploadResume';
 
 export default function LandingPage() {
   const { user } = useAuth();
-  const router = useRouter();
-  const [showUploadModal, setShowUploadModal] = useState(false);
-
-  const handleStartCreating = () => {
-    if (user) {
-      setShowUploadModal(true);
-    } else {
-      router.push('/auth/signup');
-    }
-  };
-
-  if (showUploadModal && user) {
-    return <UploadResume />;
-  }
 
   const features = [
     {
       icon: '⚡',
-      title: 'AI-Powered',
-      description: 'Instantly generate portfolios with AI analysis'
+      title: 'AI-Powered Generation',
+      description: 'Upload your resume and our AI instantly generates a professional portfolio tailored to your skills'
     },
     {
       icon: '🎨',
-      title: 'Customizable',
-      description: 'Choose from multiple modern themes'
+      title: 'Modern Themes',
+      description: 'Choose from multiple beautiful, customizable themes that reflect your personal style'
     },
     {
       icon: '📱',
-      title: 'Responsive',
-      description: 'Perfect on all devices and screen sizes'
+      title: 'Fully Responsive',
+      description: 'Your portfolio looks perfect on desktop, tablet, and mobile devices'
     },
     {
-      icon: '🚀',
-      title: 'Deploy Fast',
-      description: 'One-click deployment to Vercel, Netlify'
+      icon: '✏️',
+      title: 'Live Editor',
+      description: 'Edit your portfolio in real-time with instant preview of all changes'
     },
     {
       icon: '💾',
-      title: 'Export Code',
-      description: 'Get clean, production-ready source code'
+      title: 'Export & Deploy',
+      description: 'Get production-ready code and deploy directly to Vercel, Netlify, or your own hosting'
     },
     {
-      icon: '🔄',
-      title: 'Live Updates',
-      description: 'Real-time preview as you edit'
+      icon: '🤖',
+      title: 'AI Chat Assistant',
+      description: 'Get intelligent suggestions and improvements from our AI portfolio expert'
+    }
+  ];
+
+  const steps = [
+    {
+      number: '1',
+      title: 'Sign Up',
+      description: 'Create a free account in minutes with just your email'
+    },
+    {
+      number: '2',
+      title: 'Upload Resume',
+      description: 'Upload your resume (PDF, DOC, or DOCX format)'
+    },
+    {
+      number: '3',
+      title: 'Describe Your Vision',
+      description: 'Tell us what kind of portfolio you want - style, layout, features'
+    },
+    {
+      number: '4',
+      title: 'AI Generates',
+      description: 'Our AI creates a professional portfolio based on your input'
+    },
+    {
+      number: '5',
+      title: 'Edit & Customize',
+      description: 'Fine-tune your portfolio with our intuitive live editor'
+    },
+    {
+      number: '6',
+      title: 'Deploy',
+      description: 'Export your code and deploy to your preferred hosting platform'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-red-50">
-      {/* Enhanced Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-lg">P</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Portfolio AI</h1>
-              <p className="text-xs text-gray-500">Build in Minutes</p>
-            </div>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium transition">Features</a>
-            <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 font-medium transition">How it Works</a>
-          </nav>
+    <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#010409]">
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20 text-center">
+        <h2 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent mb-6">
+          Create Your Professional Portfolio in Minutes
+        </h2>
+        <p className="text-xl text-gray-400 mb-8 max-w-3xl mx-auto">
+          Upload your resume, tell us your vision, and let our AI generate a stunning, customizable portfolio. No coding required.
+        </p>
+        <div className="flex gap-4 justify-center flex-wrap">
+          {user ? (
+            <Link href="/dashboard" className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
+              Go to Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href="/auth/signup" className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40">
+                Start Creating
+              </Link>
+              <Link href="#how-it-works" className="px-8 py-3 border-2 border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800/50 hover:border-gray-600 transition font-semibold">
+                Learn More
+              </Link>
+            </>
+          )}
+        </div>
+      </section>
 
-          <div className="flex items-center gap-3">
-            {user ? (
-              <>
-                <Link href="/dashboard" className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition font-medium">
-                  Dashboard
-                </Link>
-                <Link href="/api/auth/logout" className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                  Sign Out
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition">
-                  Sign In
-                </Link>
-                <Link href="/auth/signup" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md">
-                  Get Started Free
-                </Link>
-              </>
-            )}
+      {/* Features Section */}
+      <section id="features" className="max-w-7xl mx-auto px-6 py-20">
+        <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent text-center mb-12">
+          Powerful Features
+        </h3>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {features.map((feature, idx) => (
+            <div key={idx} className="bg-[#161b22] rounded-xl p-8 shadow-xl shadow-black/50 hover:shadow-2xl hover:shadow-black/60 transition border border-gray-800/50 hover:border-gray-700">
+              <div className="text-4xl mb-4">{feature.icon}</div>
+              <h4 className="text-xl font-bold text-white mb-2">{feature.title}</h4>
+              <p className="text-gray-400">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="bg-[#0d1117] py-20 border-y border-gray-800/50">
+        <div className="max-w-7xl mx-auto px-6">
+          <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent text-center mb-12">
+            How It Works
+          </h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {steps.map((step, idx) => (
+              <div key={idx} className="relative">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white font-bold text-lg shadow-lg shadow-blue-500/30">
+                      {step.number}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-white mb-2">{step.title}</h4>
+                    <p className="text-gray-400">{step.description}</p>
+                  </div>
+                </div>
+                {idx < steps.length - 1 && (
+                  <div className="hidden lg:block absolute top-12 -right-4 w-8 h-0.5 bg-gray-700" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      </header>
+      </section>
 
-      <div className="flex">
-        {/* Sidebar with Features */}
-        <aside className="hidden lg:flex w-72 bg-white/50 backdrop-blur-sm border-r border-gray-200 flex-col p-8 gap-8 max-h-[calc(100vh-80px)] overflow-y-auto">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-6">Why Choose Us</h2>
-            <div className="space-y-4">
-              {features.slice(0, 3).map((feature, idx) => (
-                <div key={idx} className="group cursor-pointer">
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition">
-                    <span className="text-2xl flex-shrink-0">{feature.icon}</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">{feature.title}</h3>
-                      <p className="text-xs text-gray-600 mt-1">{feature.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Benefits Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent text-center mb-12">
+          Why Choose Portfolio AI?
+        </h3>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-xl p-8 border border-blue-500/20 hover:border-blue-500/40 transition">
+            <h4 className="text-2xl font-bold text-white mb-4">⏱️ Save Time</h4>
+            <p className="text-gray-400">Create a professional portfolio in minutes instead of hours or days of manual design and coding.</p>
           </div>
-
-          <div className="border-t border-gray-200 pt-6">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-6">Advanced Features</h2>
-            <div className="space-y-4">
-              {features.slice(3, 6).map((feature, idx) => (
-                <div key={idx} className="group cursor-pointer">
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition">
-                    <span className="text-2xl flex-shrink-0">{feature.icon}</span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">{feature.title}</h3>
-                      <p className="text-xs text-gray-600 mt-1">{feature.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-xl p-8 border border-purple-500/20 hover:border-purple-500/40 transition">
+            <h4 className="text-2xl font-bold text-white mb-4">🎯 Stand Out</h4>
+            <p className="text-gray-400">Use AI-powered design and copy suggestions to make your portfolio truly unique and impressive.</p>
           </div>
-
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
-            <p className="text-xs text-gray-700 font-medium">
-              <span className="text-blue-600 font-bold">💡 Pro Tip:</span> Add detailed portfolio descriptions for better AI-generated results
-            </p>
+          <div className="bg-gradient-to-br from-pink-500/10 to-pink-600/5 rounded-xl p-8 border border-pink-500/20 hover:border-pink-500/40 transition">
+            <h4 className="text-2xl font-bold text-white mb-4">💻 Full Control</h4>
+            <p className="text-gray-400">Export production-ready code and customize everything to match your exact specifications.</p>
           </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 flex items-center justify-center min-h-[calc(100vh-80px)] px-6 py-12">
-          <div className="max-w-2xl w-full">
-            {/* Heading */}
-            <div className="text-center mb-12">
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-                What's stopping you?
-              </h1>
-              <p className="text-xl text-gray-600">
-                Upload your resume and describe your ideal portfolio
-              </p>
-            </div>
-
-            {/* Upload Area */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 border border-gray-100">
-              <div className="space-y-6">
-                {/* Resume Upload */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Upload Resume
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      id="landing-resume"
-                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition cursor-pointer file:cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      placeholder="Choose file or drag here"
-                    />
-                  </div>
-                </div>
-
-                {/* Prompt Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Portfolio Description
-                  </label>
-                  <textarea
-                    id="landing-prompt"
-                    placeholder="Tell us about the portfolio you want to create... (e.g., 'Modern dark theme with animated sections, showcase my 5 best projects, include testimonials')"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none resize-none h-32"
-                  />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleStartCreating}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
-                  >
-                    Generate Portfolio
-                  </button>
-                  <button className="px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
-                    ⚙️
-                  </button>
-                </div>
-
-                {/* Additional Options */}
-                <div className="flex items-center gap-2 justify-center pt-2 text-sm text-gray-600">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Supports PDF, DOC, and DOCX formats
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom CTA */}
-            <div className="text-center mt-8">
-              <p className="text-gray-600 mb-4">
-                {user ? "Ready to create your portfolio?" : "Already have an account?"}
-              </p>
-              {!user && (
-                <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-semibold">
-                  Sign in here →
-                </Link>
-              )}
-            </div>
+          <div className="bg-gradient-to-br from-green-500/10 to-green-600/5 rounded-xl p-8 border border-green-500/20 hover:border-green-500/40 transition">
+            <h4 className="text-2xl font-bold text-white mb-4">🚀 Deploy Anywhere</h4>
+            <p className="text-gray-400">Deploy your portfolio to Vercel, Netlify, GitHub Pages, or your own server with just a few clicks.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 py-20 border-y border-gray-800/50">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h3 className="text-4xl font-bold text-white mb-6">Ready to Build Your Portfolio?</h3>
+          <p className="text-xl text-blue-100 mb-8">Join thousands of professionals who've created stunning portfolios with Portfolio AI.</p>
+          {user ? (
+            <Link href="/dashboard" className="inline-block px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition font-semibold shadow-lg">
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link href="/auth/signup" className="inline-block px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition font-semibold shadow-lg">
+              Get Started Free
+            </Link>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-[#0d1117] text-gray-400 py-12 border-t border-gray-800/50">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p>&copy; 2025 Portfolio AI. All rights reserved.</p>
+          <div className="flex justify-center gap-6 mt-4">
+            <a href="#" className="hover:text-white transition">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition">Terms of Service</a>
+            <a href="#" className="hover:text-white transition">Contact</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

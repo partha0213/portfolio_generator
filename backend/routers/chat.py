@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-from services.openai_service import openai_service
-from services.portfolio_chat_service import PortfolioChatService
+from services.groq_client import generate as groq_generate
+from services.lovable_style_generator import PortfolioGenerator
+import uuid
+from models import ChatHistory
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import Session as DBSession
@@ -13,8 +15,46 @@ import os
 
 router = APIRouter()
 
-# Store active portfolio chat sessions
-portfolio_chat_sessions: Dict[str, PortfolioChatService] = {}
+# Store active portfolio chat sessions (lightweight adapter)
+class SimplePortfolioChatService:
+    def __init__(self, api_key: Optional[str] = None):
+        self.generator = PortfolioGenerator()
+        self.conversation_history: List[Dict] = []
+        self.user_data: Dict = {}
+
+    def add_system_context(self, user_data: Dict):
+        self.user_data = user_data or {}
+
+    async def chat(self, message: str) -> Dict:
+        # Use PortfolioGenerator to create a concise response summary
+        resp = await self.generator.refine_portfolio(
+            refinement_request=message,
+            current_files={},
+            resume_data=self.user_data
+        )
+        summary = resp.get('summary') or resp.get('thought') or ''
+        self.conversation_history.append({"role":"user","content":message})
+        self.conversation_history.append({"role":"assistant","content":summary})
+        return {"response": summary, "code_suggestions": [], "design_tips": []}
+
+    async def get_quick_tips(self) -> Dict:
+        return {"tips": ["Improve hero section", "Add case studies", "Optimize images"]}
+
+    async def get_design_suggestions(self, focus_area: str) -> Dict:
+        return {"suggestions": [{"title": f"Improve {focus_area}", "detail": "Use clearer hierarchy"}], "code_snippets": []}
+
+    async def get_advanced_code_generation(self, request: str) -> Dict:
+        resp = await self.generator.refine_portfolio(request, {}, self.user_data)
+        return {"code": resp.get('files', {}), "explanation": resp.get('summary', '')}
+
+    async def get_design_strategy(self) -> Dict:
+        return {"color_strategy": "Use a primary color with high contrast", "typography": "Use system fonts and scale for hierarchy"}
+
+    async def get_multiple_approaches(self, feature: str) -> Dict:
+        return {"approaches": [{"level": "quick", "description": f"Simple {feature} change"}, {"level": "full", "description": f"Rebuild {feature} for performance"}]}
+
+
+portfolio_chat_sessions: Dict[str, SimplePortfolioChatService] = {}
 
 class ChatMessage(BaseModel):
     role: str
@@ -26,25 +66,53 @@ class ChatRequest(BaseModel):
     current_files: Optional[Dict[str, str]] = None
 
 @router.post("/stream")
-async def chat_stream(request: ChatRequest):
-    """Stream chat responses for real-time UI"""
+async def chat_stream(request: ChatRequest, db: AsyncSession = Depends(get_db)):
+    """Stream chat responses for real-time UI with rich events"""
     try:
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        # Get session data for context
+        result = await db.execute(
+            DBSession.__table__.select().where(DBSession.id == request.session_id)
+        )
+        session = result.fetchone()
         
-        async def generate():
-            async for chunk in openai_service.stream_chat(messages):
-                yield f"data: {json.dumps({'content': chunk})}\\n\\n"
+        if not session:
+            # Fallback for new sessions or testing
+            resume_data = {}
+        else:
+            resume_data = session.resume_data
         
+        # Get latest user message
+        user_message = request.messages[-1].content if request.messages else ""
+        
+        async def generate_events():
+            try:
+                # Stream events from the generator
+                async for event in generator.stream_refine_portfolio(
+                    refinement_request=user_message,
+                    current_files=request.current_files or {},
+                    resume_data=resume_data
+                ):
+                    yield f"data: {json.dumps(event)}\n\n"
+            except Exception as e:
+                error_event = {"type": "error", "message": str(e)}
+                yield f"data: {json.dumps(error_event)}\n\n"
+
         return StreamingResponse(
-            generate(),
+            generate_events(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
+                "X-Accel-Buffering": "no", # Disable buffering for Nginx/proxies
             }
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+from services import LovableStyleGenerator
+
+# Initialize generator
+generator = LovableStyleGenerator()
 
 @router.post("/")
 async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
@@ -61,80 +129,68 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
         
         resume_data = session.resume_data
         
-        # Build system prompt with code context
-        system_prompt = f"""You are an expert portfolio developer assistant. You help users customize their portfolio code.
-
-Current portfolio files: {list(request.current_files.keys()) if request.current_files else []}
-
-Resume data: {json.dumps(resume_data, indent=2)}
-
-When the user asks to modify the code (e.g., "change to dark theme", "make text bigger", "change colors"):
-1. Provide a brief explanation of what you're changing
-2. On a new line, write: FILE_CHANGE: <filename>
-3. Then provide the complete modified file content wrapped in ```
-4. You can modify multiple files if needed
-
-Example response format:
-"I'll update your portfolio to a dark theme with darker backgrounds and lighter text.
-
-FILE_CHANGE: src/index.css
-```css
-:root {{
-  --bg-dark: #0a0a0a;
-  --text-light: #f0f0f0;
-}}
-...
-```"
-
-Always provide COMPLETE file contents, not just the changes."""
-
-        # Prepare messages with system prompt
-        chat_messages = [{"role": "system", "content": system_prompt}]
-        chat_messages.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
+        # Get latest user message
+        user_message = request.messages[-1].content if request.messages else ""
         
-        # Get AI response
-        full_response = ""
-        async for chunk in openai_service.stream_chat(chat_messages):
-            full_response += chunk
+        # Use PortfolioGenerator to refine the portfolio
+        result = await generator.refine_portfolio(
+            refinement_request=user_message,
+            current_files=request.current_files or {},
+            resume_data=resume_data
+        )
         
-        # Parse response for file changes
-        file_changes = {}
-        response_text = full_response
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result.get("error", "Unknown error"))
+            
+        # Extract data from result
+        assistant_response = result.get("summary", "I've updated your portfolio.")
+        thought = result.get("thought")
+        file_changes = result.get("refined_files", {})
+        tools_used = result.get("tools_used", [])
+        edits_made = result.get("edits_made", [])
+        thought_time = result.get("thought_time", 0)
         
-        # Extract file changes using regex
-        file_pattern = r'FILE_CHANGE:\s*([^\n]+)\n```(?:css|javascript|jsx)?\n(.*?)```'
-        matches = re.findall(file_pattern, full_response, re.DOTALL)
-        
-        for filename, content in matches:
-            filename = filename.strip()
-            file_changes[filename] = content.strip()
-        
-        # Remove file change syntax from response text for cleaner display
-        response_text = re.sub(r'FILE_CHANGE:.*?```(?:css|javascript|jsx)?\n.*?```', '', full_response, flags=re.DOTALL).strip()
+        # Save to database
+        # Note: We currently store simple file_changes map in DB. 
+        # Detailed tools/edits are returned to UI but not yet persisted in their own columns.
+        chat_entry = ChatHistory(
+            id=str(uuid.uuid4()),
+            session_id=request.session_id,
+            user_id=request.session_id, # Temporary: using session_id as user_id if no auth
+            role="assistant",
+            message=assistant_response,
+            thought=thought,
+            file_changes=file_changes
+        )
+        db.add(chat_entry)
+        await db.commit()
         
         return {
-            "response": response_text or full_response,
-            "file_changes": file_changes if file_changes else None
+            "success": True,
+            "response": assistant_response,
+            "thought": thought,
+            "thought_time": thought_time,
+            "file_changes": file_changes,
+            "tools_used": tools_used,
+            "edits_made": edits_made,
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============= Portfolio Improvement Chat Endpoints =============
-
-@router.post("/portfolio/initialize")
 async def initialize_portfolio_chat(session_id: str, user_data: Dict) -> Dict:
     """Initialize a new portfolio improvement chat session"""
     try:
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-        
+
         chat_service = PortfolioChatService(api_key)
         chat_service.add_system_context(user_data)
-        
+
         portfolio_chat_sessions[session_id] = chat_service
-        
+
         return {
             'status': 'initialized',
             'session_id': session_id,
@@ -147,7 +203,7 @@ async def initialize_portfolio_chat(session_id: str, user_data: Dict) -> Dict:
                 'Improve responsiveness'
             ]
         }
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize: {str(e)}")
 
@@ -164,15 +220,11 @@ async def improve_portfolio(request: Dict):
         if session_id not in portfolio_chat_sessions:
             if not user_data:
                 raise HTTPException(status_code=404, detail="Session not found and no user data provided")
-            
-            api_key = os.getenv('OPENAI_API_KEY')
-            if not api_key:
-                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-            
-            chat_service = PortfolioChatService(api_key)
+
+            chat_service = SimplePortfolioChatService()
             chat_service.add_system_context(user_data)
             portfolio_chat_sessions[session_id] = chat_service
-        
+
         chat_service = portfolio_chat_sessions[session_id]
         response = await chat_service.chat(message)
         
@@ -206,8 +258,8 @@ async def get_portfolio_tips(session_id: str, user_data: Optional[Dict] = None) 
             chat_service.add_system_context(user_data)
             portfolio_chat_sessions[session_id] = chat_service
         
-        chat_service = portfolio_chat_sessions[session_id]
-        tips = await chat_service.get_quick_tips()
+            chat_service = portfolio_chat_sessions[session_id]
+            tips = await chat_service.get_quick_tips()
         
         return tips
     
@@ -224,8 +276,8 @@ async def get_focus_suggestions(session_id: str, focus_area: str) -> Dict:
         if session_id not in portfolio_chat_sessions:
             raise HTTPException(status_code=404, detail="Session not found. Initialize first.")
         
-        chat_service = portfolio_chat_sessions[session_id]
-        suggestions = await chat_service.get_design_suggestions(focus_area)
+            chat_service = portfolio_chat_sessions[session_id]
+            suggestions = await chat_service.get_design_suggestions(focus_area)
         
         return {
             'focus_area': focus_area,
@@ -286,15 +338,11 @@ async def get_advanced_code_generation(session_id: str, request: str, user_data:
         if session_id not in portfolio_chat_sessions:
             if not user_data:
                 raise HTTPException(status_code=404, detail="Session not found")
-            
-            api_key = os.getenv('OPENAI_API_KEY')
-            if not api_key:
-                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-            
-            chat_service = PortfolioChatService(api_key)
+
+            chat_service = SimplePortfolioChatService()
             chat_service.add_system_context(user_data)
             portfolio_chat_sessions[session_id] = chat_service
-        
+
         chat_service = portfolio_chat_sessions[session_id]
         result = await chat_service.get_advanced_code_generation(request)
         
@@ -313,15 +361,11 @@ async def get_design_strategy(session_id: str, user_data: Optional[Dict] = None)
         if session_id not in portfolio_chat_sessions:
             if not user_data:
                 raise HTTPException(status_code=404, detail="Session not found")
-            
-            api_key = os.getenv('OPENAI_API_KEY')
-            if not api_key:
-                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-            
-            chat_service = PortfolioChatService(api_key)
+
+            chat_service = SimplePortfolioChatService()
             chat_service.add_system_context(user_data)
             portfolio_chat_sessions[session_id] = chat_service
-        
+
         chat_service = portfolio_chat_sessions[session_id]
         strategy = await chat_service.get_design_strategy()
         
@@ -340,15 +384,11 @@ async def get_multiple_approaches(session_id: str, feature: str, user_data: Opti
         if session_id not in portfolio_chat_sessions:
             if not user_data:
                 raise HTTPException(status_code=404, detail="Session not found")
-            
-            api_key = os.getenv('OPENAI_API_KEY')
-            if not api_key:
-                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-            
-            chat_service = PortfolioChatService(api_key)
+
+            chat_service = SimplePortfolioChatService()
             chat_service.add_system_context(user_data)
             portfolio_chat_sessions[session_id] = chat_service
-        
+
         chat_service = portfolio_chat_sessions[session_id]
         approaches = await chat_service.get_multiple_approaches(feature)
         

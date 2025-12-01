@@ -1,0 +1,334 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Portfolio Design Configuration",
+    "type": "object",
+    "properties": {
+        "theme": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "enum": [
+                        "vibrant_creative",
+                        "minimal_modern",
+                        "dark_professional",
+                        "colorful_bold",
+                        "corporate_clean"
+                    ]
+                },
+                "colors": {
+                    "type": "object",
+                    "properties": {
+                        "primary": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "secondary": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "background": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "text": {
+                            "type": "string",
+                            "pattern": "^#[0-9A-Fa-f]{6}$"
+                        }
+                    },
+                    "required": [
+                        "primary",
+                        "secondary",
+                        "background",
+                        "text"
+                    ]
+                },
+                "typography": {
+                    "type": "object",
+                    "properties": {
+                        "headingFont": {
+                            "type": "string"
+                        },
+                        "bodyFont": {
+                            "type": "string"
+                        },
+                        "scale": {
+                            "type": "string",
+                            "enum": [
+                                "large",
+                                "medium",
+                                "small"
+                            ]
+                        }
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "colors"
+            ]
+        },
+        "layout": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "grid",
+                        "single_page",
+                        "multi_section"
+                    ]
+                },
+                "heroStyle": {
+                    "type": "string",
+                    "enum": [
+                        "large_imagery",
+                        "minimal",
+                        "split_screen",
+                        "typographic"
+                    ]
+                },
+                "navStyle": {
+                    "type": "string",
+                    "enum": [
+                        "transparent",
+                        "solid",
+                        "glassmorphic",
+                        "sidebar"
+                    ]
+                },
+                "sectionOrder": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "type",
+                "heroStyle",
+                "sectionOrder"
+            ]
+        },
+        "sections": {
+            "type": "object",
+            "properties": {
+                "hero": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "variant": {
+                            "type": "string"
+                        },
+                        "includeImage": {
+                            "type": "boolean"
+                        },
+                        "ctaButtons": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "about": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "layout": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "skills": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "displayStyle": {
+                            "type": "string",
+                            "enum": [
+                                "badges",
+                                "grid",
+                                "bars",
+                                "cloud"
+                            ]
+                        },
+                        "columns": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "projects": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "displayStyle": {
+                            "type": "string",
+                            "enum": [
+                                "grid",
+                                "carousel",
+                                "masonry",
+                                "list"
+                            ]
+                        },
+                        "columns": {
+                            "type": "integer"
+                        },
+                        "showImages": {
+                            "type": "boolean"
+                        },
+                        "showTags": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                "case_studies": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "includeBeforeAfter": {
+                            "type": "boolean"
+                        },
+                        "layout": {
+                            "type": "string",
+                            "enum": [
+                                "side_by_side",
+                                "slider",
+                                "stacked"
+                            ]
+                        }
+                    }
+                },
+                "testimonials": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "layout": {
+                            "type": "string",
+                            "enum": [
+                                "cards",
+                                "carousel",
+                                "quotes",
+                                "grid"
+                            ]
+                        },
+                        "columns": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "process": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "displayStyle": {
+                            "type": "string",
+                            "enum": [
+                                "numbered_steps",
+                                "timeline",
+                                "grid",
+                                "cards"
+                            ]
+                        },
+                        "steps": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "contact": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "layout": {
+                            "type": "string"
+                        },
+                        "includeSocials": {
+                            "type": "boolean"
+                        }
+                    }
+                }
+            }
+        },
+        "styling": {
+            "type": "object",
+            "properties": {
+                "borderRadius": {
+                    "type": "string",
+                    "enum": [
+                        "rounded",
+                        "sharp",
+                        "pill",
+                        "none"
+                    ]
+                },
+                "shadows": {
+                    "type": "string",
+                    "enum": [
+                        "subtle",
+                        "prominent",
+                        "none",
+                        "flat"
+                    ]
+                },
+                "animations": {
+                    "type": "string",
+                    "enum": [
+                        "smooth",
+                        "bouncy",
+                        "none",
+                        "fade",
+                        "slide"
+                    ]
+                }
+            }
+        },
+        "responsive": {
+            "type": "object",
+            "properties": {
+                "breakpoints": {
+                    "type": "object",
+                    "properties": {
+                        "mobile": {
+                            "type": "integer"
+                        },
+                        "tablet": {
+                            "type": "integer"
+                        },
+                        "desktop": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "mobileFirst": {
+                    "type": "boolean"
+                }
+            }
+        }
+    },
+    "required": [
+        "theme",
+        "layout",
+        "sections",
+        "styling"
+    ]
+}
