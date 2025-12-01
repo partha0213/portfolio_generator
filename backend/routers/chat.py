@@ -7,6 +7,7 @@ from services.lovable_style_generator import PortfolioGenerator
 import uuid
 from models import ChatHistory
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from database import get_db
 from models import Session as DBSession
 import json
@@ -292,23 +293,34 @@ async def get_focus_suggestions(session_id: str, focus_area: str) -> Dict:
 
 
 @router.get("/portfolio/history/{session_id}")
-async def get_portfolio_chat_history(session_id: str) -> Dict:
-    """Get conversation history"""
+async def get_portfolio_chat_history(session_id: str, db: AsyncSession = Depends(get_db)) -> Dict:
+    """Get conversation history from database"""
     try:
-        if session_id not in portfolio_chat_sessions:
-            raise HTTPException(status_code=404, detail="Session not found")
+        # Query chat history from database
+        result = await db.execute(
+            select(ChatHistory)
+            .where(ChatHistory.session_id == session_id)
+            .order_by(ChatHistory.created_at)
+        )
+        chat_records = result.scalars().all()
         
-        chat_service = portfolio_chat_sessions[session_id]
-        history = chat_service.get_conversation_history()
+        # Convert database records to message format
+        messages = []
+        for record in chat_records:
+            message = {
+                'role': record.role,
+                'content': record.message,
+                'thought': record.thought,
+                'fileChanges': record.file_changes
+            }
+            messages.append(message)
         
         return {
             'session_id': session_id,
-            'messages': history,
-            'message_count': len(history)
+            'messages': messages,
+            'message_count': len(messages)
         }
     
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 

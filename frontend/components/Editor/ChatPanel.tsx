@@ -1,9 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Diff, parseDiff, Hunk, tokenize } from 'react-diff-view';
-import 'react-diff-view/style/index.css';
-
-interface ChatPanelProps {
+    import { Diff, parseDiff, Hunk, tokenize } from 'react-diff-view';
+    import 'react-diff-view/style/index.css';
+    import { api } from '@/lib/api';interface ChatPanelProps {
     sessionId: string;
     resumeData: any;
     currentFiles: Record<string, string>;
@@ -135,10 +134,11 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Load initial history
+    // Load initial history and chat messages
     useEffect(() => {
         if (sessionId) {
             fetchHistory();
+            loadChatMessages();
         }
     }, [sessionId]);
 
@@ -155,11 +155,9 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch(`/api/history/sessions/${sessionId}/snapshots`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const snapshots = await res.json();
+            const response = await api.get(`/api/history/sessions/${sessionId}/snapshots`);
+            if (response.status === 200) {
+                const snapshots = response.data;
                 const ids = snapshots.map((s: any) => s.id).reverse();
                 setHistory(ids);
                 setCurrentHistoryIndex(ids.length - 1);
@@ -169,15 +167,25 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
         }
     };
 
+    const loadChatMessages = async () => {
+        try {
+            const response = await api.get(`/api/chat/portfolio/history/${sessionId}`);
+            if (response.status === 200) {
+                const data = response.data;
+                if (data.messages && Array.isArray(data.messages)) {
+                    setMessages(data.messages);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load chat messages", e);
+        }
+    };
+
     const saveSnapshot = async (files: Record<string, string>, description: string) => {
         try {
-            const res = await fetch(`/api/history/sessions/${sessionId}/snapshot`, {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({ files, description })
-            });
-            if (res.ok) {
-                const snapshot = await res.json();
+            const response = await api.post(`/api/history/sessions/${sessionId}/snapshot`, { files, description });
+            if (response.status === 200) {
+                const snapshot = response.data;
                 setHistory(prev => [...prev, snapshot.id]);
                 setCurrentHistoryIndex(prev => prev + 1);
             }
@@ -193,11 +201,9 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
         const snapshotId = history[prevIndex];
 
         try {
-            const res = await fetch(`/api/history/sessions/${sessionId}/snapshot/${snapshotId}`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const data = await res.json();
+            const response = await api.get(`/api/history/sessions/${sessionId}/snapshot/${snapshotId}`);
+            if (response.status === 200) {
+                const data = response.data;
                 onFilesChange(data.files);
                 setCurrentHistoryIndex(prevIndex);
 
@@ -218,11 +224,9 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
         const snapshotId = history[nextIndex];
 
         try {
-            const res = await fetch(`/api/history/sessions/${sessionId}/snapshot/${snapshotId}`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const data = await res.json();
+            const response = await api.get(`/api/history/sessions/${sessionId}/snapshot/${snapshotId}`);
+            if (response.status === 200) {
+                const data = response.data;
                 onFilesChange(data.files);
                 setCurrentHistoryIndex(nextIndex);
 
@@ -254,7 +258,7 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
 
         try {
             if (tabMode === 'code') {
-                const response = await fetch('/api/chat/stream', {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/chat/stream`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
@@ -339,89 +343,57 @@ export default function ChatPanel({ sessionId, resumeData, currentFiles, onFiles
                     }
                 }
             } else if (tabMode === 'design') {
-                const response = await fetch('/api/chat/portfolio/improve', {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        message: input,
-                        user_data: resumeData
-                    })
+                const response = await api.post('/api/chat/portfolio/improve', {
+                    session_id: sessionId,
+                    message: input,
+                    user_data: resumeData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setMessages(prev => [...prev, {
-                        role: 'assistant',
-                        content: data.response,
-                        codeSuggestions: data.code_suggestions,
-                        tips: data.design_tips
-                    }]);
-                } else {
-                    throw new Error('Failed to get design suggestions');
-                }
+                const data = response.data;
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: data.response,
+                    codeSuggestions: data.code_suggestions,
+                    tips: data.design_tips
+                }]);
             } else if (tabMode === 'advanced-code') {
-                const response = await fetch('/api/chat/portfolio/advanced-code', {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        request: input,
-                        user_data: resumeData
-                    })
+                const response = await api.post('/api/chat/portfolio/advanced-code', {
+                    session_id: sessionId,
+                    request: input,
+                    user_data: resumeData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setMessages(prev => [...prev, {
-                        role: 'assistant',
-                        content: data.explanation,
-                        codeDetails: data
-                    }]);
-                } else {
-                    throw new Error('Failed to generate advanced code');
-                }
+                const data = response.data;
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: data.explanation,
+                    codeDetails: data
+                }]);
             } else if (tabMode === 'strategy') {
-                const response = await fetch('/api/chat/portfolio/design-strategy', {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        user_data: resumeData
-                    })
+                const response = await api.post('/api/chat/portfolio/design-strategy', {
+                    session_id: sessionId,
+                    user_data: resumeData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setMessages(prev => [...prev, {
-                        role: 'assistant',
-                        content: "Here is a comprehensive design strategy for your portfolio:",
-                        strategyDetails: data
-                    }]);
-                } else {
-                    throw new Error('Failed to get design strategy');
-                }
+                const data = response.data;
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: "Here is a comprehensive design strategy for your portfolio:",
+                    strategyDetails: data
+                }]);
             } else if (tabMode === 'approaches') {
-                const response = await fetch('/api/chat/portfolio/multiple-approaches', {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        session_id: sessionId,
-                        request: input,
-                        user_data: resumeData
-                    })
+                const response = await api.post('/api/chat/portfolio/multiple-approaches', {
+                    session_id: sessionId,
+                    request: input,
+                    user_data: resumeData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setMessages(prev => [...prev, {
-                        role: 'assistant',
-                        content: "I've generated 3 different approaches for you:",
-                        approaches: data.approaches
-                    }]);
-                } else {
-                    throw new Error('Failed to get approaches');
-                }
+                const data = response.data;
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: "I've generated 3 different approaches for you:",
+                    approaches: data.approaches
+                }]);
             }
         } catch (error) {
             console.error('Chat error:', error);

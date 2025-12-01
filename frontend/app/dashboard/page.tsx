@@ -32,6 +32,34 @@ export default function DashboardPage() {
         totalViews: 0
     });
 
+    // Dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+    // Open dialog
+    const openDeleteDialog = (projectId: string) => {
+        setSelectedProjectId(projectId);
+        setDeleteDialogOpen(true);
+    };
+
+    // Close dialog
+    const closeDeleteDialog = () => {
+        setDeleteDialogOpen(false);
+        setSelectedProjectId(null);
+    };
+
+    // Handle project deletion (to be called after confirmation)
+    const handleDelete = async () => {
+        if (!selectedProjectId) return;
+        try {
+            await api.delete(`/api/history/${selectedProjectId}`);
+            setPortfolios((prev) => prev.filter((p) => p.id !== selectedProjectId));
+            closeDeleteDialog();
+        } catch (err) {
+            alert('Failed to delete project.');
+        }
+    };
+
     useEffect(() => {
         if (!loading && !user) {
             router.push('/auth/login');
@@ -84,33 +112,7 @@ export default function DashboardPage() {
     }
 
 
-    // Dialog state
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
-    // Open dialog
-    const openDeleteDialog = (projectId: string) => {
-        setSelectedProjectId(projectId);
-        setDeleteDialogOpen(true);
-    };
-
-    // Close dialog
-    const closeDeleteDialog = () => {
-        setDeleteDialogOpen(false);
-        setSelectedProjectId(null);
-    };
-
-    // Handle project deletion (to be called after confirmation)
-    const handleDelete = async () => {
-        if (!selectedProjectId) return;
-        try {
-            await api.delete(`/api/history/${selectedProjectId}`);
-            setPortfolios((prev) => prev.filter((p) => p.id !== selectedProjectId));
-            closeDeleteDialog();
-        } catch (err) {
-            alert('Failed to delete project.');
-        }
-    };
 
     return (
         <>
@@ -289,8 +291,8 @@ export default function DashboardPage() {
                                             {/* Status Badge */}
                                             <div className="absolute top-3 right-3">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${portfolio.status === 'published'
-                                                        ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                                                        : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                                                    : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
                                                     }`}>
                                                     {portfolio.status === 'published' ? '● Published' : '○ Draft'}
                                                 </span>
